@@ -1,0 +1,5 @@
+{
+    "name": "Example App",
+    "type": "web",
+    "urls": ["https://example.com", "http://example.com"]
+}

@@ -1,0 +1,1 @@
+BASE_URI = 'https://prk3.ovh/qa-task/apps/'
