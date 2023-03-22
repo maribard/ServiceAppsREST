@@ -1,70 +1,34 @@
-import random
-import requests
 from clients.apps.apps_client import AppsClient
 from tests.assertions.apps_assertions import *
+from tests.conftest import *
 
 client = AppsClient()
 
 
-def test_delete_last_app(create_data):
-    created_data = create_data
-    random_no = random.randint(0, 1000)
-    created_data['name'] = created_data['name'] + f"{random_no}"
+@pytest.mark.parametrize("random_number", [(0, 1000)], indirect=True)
+def test_delete_last_app(create_data, random_number):
+    create_data['name'] = create_data['name'] + f"{random_number}"
 
-    name, response = client.create_app(created_data)
-    assert_that(response.status_code).is_equal_to(requests.codes.ok)
-    app = response.as_dict
+    name, post_response = client.create_app(create_data)
+    verify_successful_post_response(post_response, create_data)
 
-    expected_name = created_data['name']
-    expected_type = created_data['type']
-    expected_urls = created_data['urls']
+    get_response = client.get_all_apps(params={'limit': 99})
+    verify_successful_get_response(get_response, count_off_apps=99)
+    id_app_to_delete = get_id_app(get_response, name)
 
-    assert_that(app["name"]).is_instance_of(str)
-    assert_that(len(app["name"])).is_between(0, 60)
-    assert_that(app["name"]).is_equal_to(expected_name)
+    delete_response = client.delete_app(id_app_to_delete)
+    assert_that(delete_response.status_code).is_equal_to(204)
 
-    assert_that(app["type"]).is_instance_of(str)
-    assert_that(app["type"]).is_equal_to(expected_type)
+    get_response_2 = client.get_all_apps(params={'limit': 99})
+    verify_if_app_not_exist_in_get_response(get_response_2, name_app=name)
 
-    assert_that(len(app["urls"])).is_between(1, 2083)
-    assert_that(app["urls"]).is_equal_to(expected_urls)
-
-    assert_that(app["id"]).is_instance_of(str)
-    assert_that(app["created_at"]).is_instance_of(str)
-
-    response_1 = client.get_all_apps(params={'limit': 99})
-    assert_that(response_1.status_code).is_equal_to(requests.codes.ok)
-    for i in response_1.as_dict:
-        if i["name"] == expected_name:
-            id_app_to_delete = i["id"]
-
-    response_2 = client.delete_app(id_app_to_delete)
-    assert_that(response_2.status_code).is_equal_to(204)
-
-    response_3 = client.get_all_apps(params={'limit': 99})
-    assert_that(response_3.status_code).is_equal_to(requests.codes.ok)
-    for i in response_3.as_dict:
-        if i["name"] == expected_name:
-            raise Exception(f"Sorry, App {i['id']} was not deleted")
-
-    response4 = client.get_one_app_by_id(id_app_to_delete)
-    one_app = response4.as_dict
-    print(one_app["detail"])
-    assert_that(response4.status_code).is_equal_to(404)
+    get_response_one_app = client.get_one_app_by_id(id_app_to_delete)
+    verify_that_app_was_not_found(get_response_one_app)
 
 
-def test_delete_app_which_not_exist():
-    response = client.delete_app("56464864fdfd")
-    assert_that(response.status_code).is_equal_to(422)
-    one_app = response.as_dict
+@pytest.mark.parametrize("id_app_to_delete", ["56464864fdfd"])
+def test_delete_app_which_not_exist(id_app_to_delete):
+    delete_response = client.delete_app(id_app_to_delete)
+    verify_valid_delete_response(response=delete_response, loc="app_id",
+                                 message="value is not a valid uuid")
 
-    assert_that(len(one_app)).is_equal_to(1)
-    print(one_app["detail"])
-    for i in one_app["detail"]:
-        print(i["loc"])
-        assert_that(i["loc"]).is_instance_of(list)
-        assert_that(i["loc"][1]).is_equal_to("app_id")
-
-        assert_that(i["msg"]).is_instance_of(str)
-        assert_that(i["msg"]).is_equal_to("value is not a valid uuid")
-        assert_that(i["type"]).is_instance_of(str)

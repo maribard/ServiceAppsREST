@@ -19,13 +19,10 @@ class AppsClient(BaseClient):
         :param body: Request body
         :return: Name created APP and Response Object
         """
-        name, response = self.__create_app_with_unique_last_name(body)
-        return name, response
-
-    def __create_app_with_unique_last_name(self, body):
         name = body["name"]
         response = self.request.post(self.base_url, body, self.headers)
         return name, response
+
 
     def get_one_app_by_id(self, app_id):
         """
@@ -34,7 +31,6 @@ class AppsClient(BaseClient):
         :return: Response Object
         """
         new_url = self.base_url + f"{app_id}"
-        print(new_url)
         return self.request.get(new_url)
 
     def get_all_apps(self, params=None):
